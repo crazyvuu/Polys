@@ -10,6 +10,7 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import javax.swing.JComponent;
@@ -28,12 +29,13 @@ public class Main extends JComponent implements MouseListener {
 	private ArrayList<Point> blueAreas = new ArrayList<Point>();
 	private ArrayList<Point> redAreas = new ArrayList<Point>();
 	private ArrayList<Point> currentArea = new ArrayList<Point>();
-	// private ArrayList<int[]> blueTakenAreas = new ArrayList<int[]>();
-	// private ArrayList<int[]> redTakenAreas = new ArrayList<int[]>();
+	private ArrayList<Point> currentRedArea = new ArrayList<Point>();
 	private ArrayList<Integer> pBluePos = new ArrayList<Integer>();
 	private ArrayList<Integer> pRedPos = new ArrayList<Integer>();
 	private ArrayList<ArrayList<Integer>> xBlue = new ArrayList<ArrayList<Integer>>();
 	private ArrayList<ArrayList<Integer>> yBlue = new ArrayList<ArrayList<Integer>>();
+	private ArrayList<ArrayList<Integer>> xRed = new ArrayList<ArrayList<Integer>>();
+	private ArrayList<ArrayList<Integer>> yRed = new ArrayList<ArrayList<Integer>>();
 	private boolean blueHave = false, redHave = false;
 	int t = 20;
 	double r = t * Math.sqrt(3) / 2;
@@ -139,72 +141,33 @@ public class Main extends JComponent implements MouseListener {
 			}
 			l = 0;
 		}
-		// firstPosition = pBluePos.get(0);
 		checkAreas();
 		if (!blueAreas.isEmpty()) {
-			/*
-			 * for (int i = pBluePos.get(0); i < pBluePos.size(); i++) { if
-			 * (pRedPos.contains(i + 19)) { if (pBluePos.contains(i + 20)) { i
-			 * += 20; } else i -= 21; } if (pRedPos.contains(i - 21)) { if
-			 * (pBluePos.contains(i - 20)) i -= 20; else i -= 40; } if
-			 * (pRedPos.contains(i - 40)) { if (pBluePos.contains(i - 20)) i -=
-			 * 20; else i -= 19; } if (pRedPos.contains(i - 20)) { if
-			 * (pBluePos.contains(i + 20)) i += 20; else i -= 40; } if
-			 * (pRedPos.contains(i + 20)) { if (pBluePos.contains(i + 50)) i +=
-			 * 40; else i += 19; } if (pRedPos.contains(i + 40)) { if
-			 * (pBluePos.contains(i + 20)) i += 20; else i += 19; } }
-			 */
-			for (int i = 0; i < blueAreas.size(); i++) {
-				int[] eq = new int[] { (int) (blueAreas.get(i).x - 1.5 * t),
-						(int) (blueAreas.get(i).y + r), blueAreas.get(i).x,
-						(int) (blueAreas.get(i).y + 2 * r),
-						(int) (blueAreas.get(i).x + 1.5 * t),
-						(int) (blueAreas.get(i).y + r),
-						(int) (blueAreas.get(i).x + 1.5 * t),
-						(int) (blueAreas.get(i).y - r), blueAreas.get(i).x,
-						(int) (blueAreas.get(i).y - 2 * r),
-						(int) (blueAreas.get(i).x - 1.5 * t),
-						(int) (blueAreas.get(i).y - r) };
-				for (int j = 0; j < eq.length - 1; j += 2) {
-					int[] check = new int[] { eq[j], eq[j + 1] };
-					if (redAreas.contains(check)) {
-						for (int jb = j + 2; jb < eq.length; jb += 2) {
-							if (blueAreas.contains(new int[] { eq[jb],
-									eq[jb + 1] })) {
-								// xBlue.add(blueAreas.get(i).x);
-								// yBlue.add(blueAreas.get(i).y);
-								j = eq.length;
-								jb = eq.length;
-								l++;
-							}
-						}
-					}
-				}
-				g.setColor(Color.green);
-				g.setStroke(new BasicStroke(4, BasicStroke.CAP_ROUND,
-						BasicStroke.JOIN_ROUND)); // g.drawLine(blueAreas.get(i)[0],
-													// blueAreas.get(i)[1],
-													// blueAreas.get(i)[2],
-													// blueAreas.get(i)[3]);
-			}
+			g.setColor(Color.green);
+			g.setStroke(new BasicStroke(4, BasicStroke.CAP_ROUND,
+					BasicStroke.JOIN_ROUND));
 			if (xBlue.size() > 0 && yBlue.size() > 0) {
 				for (int i = 0; i < xBlue.size(); i++) {
+					grahamScan(i);
 					g.drawPolygon(convertIntegers(xBlue.get(i)),
 							convertIntegers(yBlue.get(i)), xBlue.get(i).size());
 				}
 			}
 		}
 		if (!redAreas.isEmpty()) {
-			for (int i = 0; i < redAreas.size(); i++) {
-				g.setColor(Color.yellow);
-				g.setStroke(new BasicStroke(4, BasicStroke.CAP_ROUND,
-						BasicStroke.JOIN_ROUND));
-				// g.drawLine(redAreas.get(i)[0], redAreas.get(i)[1],
-				// redAreas.get(i)[2], redAreas.get(i)[3]);
+			g.setColor(Color.yellow);
+			g.setStroke(new BasicStroke(4, BasicStroke.CAP_ROUND,
+					BasicStroke.JOIN_ROUND));
+			if (xRed.size() > 0 && yRed.size() > 0) {
+				for (int i = 0; i < xRed.size(); i++) {
+					g.drawPolygon(convertIntegers(xRed.get(i)),
+							convertIntegers(yRed.get(i)), xRed.get(i).size());
+				}
 			}
 		}
 	}
 
+	// Ковертация ArrayList<Integer> в int[] для построения полигона
 	public static int[] convertIntegers(List<Integer> integers) {
 		int[] ret = new int[integers.size()];
 		for (int i = 0; i < ret.length; i++) {
@@ -317,12 +280,55 @@ public class Main extends JComponent implements MouseListener {
 						l++;
 					}
 					ba = new Point(sumXd / 6, sumYe / 6);
-					if (!redAreas.contains(ba))
+					if (!redAreas.contains(ba)) {
 						redAreas.add(ba);
+						currentRedArea.add(ba);
+						if (36 > ba.distance(currentRedArea.get(0))
+								&& ba.distance(currentRedArea.get(0)) > 33
+								&& !ba.equals(currentRedArea.get(1))) {
+							ArrayList<Integer> xRedNew = new ArrayList<Integer>();
+							ArrayList<Integer> yRedNew = new ArrayList<Integer>();
+							for (int gb = 0; gb < currentRedArea.size(); gb++) {
+								xRedNew.add(currentRedArea.get(gb).x);
+								yRedNew.add(currentRedArea.get(gb).y);
+							}
+							xRed.add(xRedNew);
+							yRed.add(yRedNew);
+							currentRedArea.clear();
+						}
+					}
 					l = 0;
 					sumXd = 0;
 					sumYe = 0;
 				}
+			}
+		}
+	}
+
+	// Определение расположения точки c относительно вектора ab (слева > 0,
+	// справа < 0)
+	public int rotate(int ax, int ay, int bx, int by, int cx, int cy) {
+		return (bx - ax) * (cy - by) - (by - ay) * (cx - bx);
+	}
+
+	// Алгоритм сортировки точек Graham scan
+	public void grahamScan(int i) {
+		int k = 0;
+		for (int j = 0; j < xBlue.get(i).size(); j++) {
+			if (xBlue.get(i).get(j) < xBlue.get(i).get(0)) {
+				Collections.swap(xBlue.get(i), 0, j);
+				Collections.swap(yBlue.get(i), 0, j);
+			}
+		}
+		for (int j = 0; j < xBlue.get(i).size(); j++) {
+			k = j;
+			while (k > 1
+					&& rotate(xBlue.get(i).get(0), yBlue.get(i).get(0), xBlue
+							.get(i).get(k - 1), yBlue.get(i).get(k - 1), xBlue
+							.get(i).get(k), yBlue.get(i).get(k)) < 0) {
+				Collections.swap(xBlue.get(i), k - 1, k);
+				Collections.swap(yBlue.get(i), k - 1, k);
+				k--;
 			}
 		}
 	}
@@ -360,42 +366,3 @@ public class Main extends JComponent implements MouseListener {
 		textArea.setText("exited");
 	}
 }
-
-/*
- * 
- * public static int[] removeElements(int[] input, int deleteMe) { int[] result
- * = new int[6]; int i = 0; for (int item : input) { if (deleteMe != item) {
- * result[i] = item; i++; } } return result; } StringBuffer resX = new
- * StringBuffer(); StringBuffer resY = new StringBuffer(); for (int ii = 0; ii <
- * x.length; ii++) { if (ii != 5) resX.append(x[ii] + ", "); else
- * resX.append(x[ii]); } for (int ii = 0; ii < y.length; ii++) { if (ii != 5)
- * resY.append(y[ii] + ", "); else resY.append(y[ii]); }
- * textArea.setText(resX.toString() + "   posX - " + posX + "\n" +
- * resY.toString() + "   posY - " + posY); if (poly.xpoints.length > 6)
- * poly.xpoints = removeElements(poly.xpoints, poly.xpoints[7]); if
- * (poly.ypoints.length > 6) poly.ypoints = removeElements(poly.ypoints,
- * poly.ypoints[7]);
- */
-
-/*
- * 
- * for (int c = 0; c < bluePlayer.get(a).length; c++) { for (int f = 0; f <
- * bluePlayer.get(a).length; f++) { if (c != bluePlayer.get(a).length - 1 && f
- * != bluePlayer.get(a).length - 1 && f != 0) { if (a != d && b != e) { if
- * ((bluePlayer.get(d)[c] == bluePlayer.get(a)[f] || bluePlayer .get(d)[c] ==
- * bluePlayer.get(a)[f - 1]) && (bluePlayer.get(e)[c] == bluePlayer .get(b)[f]
- * || bluePlayer.get(e)[c + 1] == bluePlayer .get(b)[f - 1] || ((bluePlayer
- * .get(b)[0] == bluePlayer.get(e)[2]) && (bluePlayer .get(b)[5] ==
- * bluePlayer.get(e)[3])))) { if ((bluePlayer.get(d)[c + 1] == bluePlayer
- * .get(a)[f + 1] || bluePlayer.get(d)[c + 1] == bluePlayer .get(a)[f]) &&
- * (bluePlayer.get(e)[c + 1] == bluePlayer .get(b)[f + 1] || bluePlayer.get(e)[c
- * + 1] == bluePlayer .get(b)[f - 1] || (bluePlayer .get(b)[0] == bluePlayer
- * .get(e)[2]) && (bluePlayer.get(b)[5] == bluePlayer .get(e)[3]))) { while (l <
- * 6) { sumXd += bluePlayer.get(d)[l]; sumYe += bluePlayer.get(e)[l]; sumXa +=
- * bluePlayer.get(a)[l]; sumYb += bluePlayer.get(b)[l]; l++; } ba = new int[] {
- * sumXa / 6, sumYb / 6, sumXd / 6, sumYe / 6 }; for (int i = 0; i <
- * blueAreas.size(); i++) { if (Arrays.equals(blueAreas.get(i), ba)) blueExist =
- * true; } if (!blueExist) blueAreas.add(ba); else blueExist = false; l = 0;
- * sumXd = 0; sumXa = 0; sumYe = 0; sumYb = 0; } } } } } }
- */
-
