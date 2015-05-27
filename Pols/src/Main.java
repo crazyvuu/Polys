@@ -4,11 +4,13 @@ import java.awt.Color;
 import java.awt.EventQueue;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Point;
 import java.awt.Polygon;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import javax.swing.JComponent;
 import javax.swing.JFrame;
@@ -20,15 +22,23 @@ public class Main extends JComponent implements MouseListener {
 	private static JTextArea textArea;
 	private int posX = 0;
 	private int posY = 0;
-	private int clickCount = 0;
 	private Polygon poly = new Polygon();
-	private ArrayList<int[]> bluePlayer = new ArrayList<int[]>();
-	private ArrayList<int[]> redPlayer = new ArrayList<int[]>();
-	private ArrayList<int[]> blueAreas = new ArrayList<int[]>();
-	private ArrayList<int[]> redAreas = new ArrayList<int[]>();
-	private boolean blueHave = false, redHave = false, blueExist = false,
-			redExist = false;
-	private int[] ba;
+	private ArrayList<double[]> bluePlayer = new ArrayList<double[]>();
+	private ArrayList<double[]> redPlayer = new ArrayList<double[]>();
+	private ArrayList<Point> blueAreas = new ArrayList<Point>();
+	private ArrayList<Point> redAreas = new ArrayList<Point>();
+	private ArrayList<Point> currentArea = new ArrayList<Point>();
+	// private ArrayList<int[]> blueTakenAreas = new ArrayList<int[]>();
+	// private ArrayList<int[]> redTakenAreas = new ArrayList<int[]>();
+	private ArrayList<Integer> pBluePos = new ArrayList<Integer>();
+	private ArrayList<Integer> pRedPos = new ArrayList<Integer>();
+	private ArrayList<ArrayList<Integer>> xBlue = new ArrayList<ArrayList<Integer>>();
+	private ArrayList<ArrayList<Integer>> yBlue = new ArrayList<ArrayList<Integer>>();
+	private boolean blueHave = false, redHave = false;
+	int t = 20;
+	double r = t * Math.sqrt(3) / 2;
+	private Point ba;
+	int firstPosition = 0;
 
 	/**
 	 * Launch the application.
@@ -60,28 +70,26 @@ public class Main extends JComponent implements MouseListener {
 		frame.addMouseListener(this);
 	}
 
+	// Строение поля с текущим положением игроков
 	public void paint(Graphics g2) {
-		double t = 20;
-		double r = t * Math.sqrt(3) / 2;
-		int l = 0;
+		int l = 0, posCount = 0;
 		Graphics2D g = (Graphics2D) g2;
-		int[] x = { 20, (int) (30), 20, 40, (int) (30 + t), 40 };
-		int[] z = { 20, (int) (30 - t), 20, 40, (int) (30 + t), 40 };
-		int[] y = { 20, (int) (20 + r), (int) (20 + 2 * r), (int) (20 + 2 * r),
-				(int) (20 + r), 20 };
+		double[] x = { t, 1.5 * t, t, 2 * t, 1.5 * t + t, 2 * t };
+		double[] z = { t, 1.5 * t - t, t, 2 * t, 1.5 * t + t, 2 * t };
+		double[] y = { t, t + r, t + 2 * r, t + 2 * r, t + r, t };
 		for (int j = 0; j < 20; j++) {
 			poly.reset();
 			if (j % 2 == 0) {
 				while (l < 6) {
 					x[l] = z[l];
-					poly.addPoint(x[l], y[l]);
+					poly.addPoint((int) x[l], (int) y[l]);
 					l++;
 				}
 				l = 0;
 			} else {
 				while (l < 6) {
 					x[l] = (int) (z[l] + 1.5 * t);
-					poly.addPoint(x[l], y[l]);
+					poly.addPoint((int) x[l], (int) y[l]);
 					l++;
 				}
 				l = 0;
@@ -99,14 +107,16 @@ public class Main extends JComponent implements MouseListener {
 						redHave = false;
 					} else {
 						if (poly.contains(posX, posY)) {
-							if (clickCount % 2 == 0) {
+							if (redPlayer.size() < bluePlayer.size()) {
 								g.setColor(Color.RED);
 								redPlayer.add(x.clone());
 								redPlayer.add(y.clone());
+								pRedPos.add(posCount);
 							} else {
 								g.setColor(Color.BLUE);
 								bluePlayer.add(x.clone());
 								bluePlayer.add(y.clone());
+								pBluePos.add(posCount);
 							}
 							g.fillPolygon(poly);
 						} else
@@ -117,10 +127,11 @@ public class Main extends JComponent implements MouseListener {
 				poly.reset();
 				while (l < 6) {
 					x[l] += 3 * t;
-					poly.addPoint(x[l], y[l]);
+					poly.addPoint((int) x[l], (int) y[l]);
 					l++;
 				}
 				l = 0;
+				posCount++;
 			}
 			while (l < 6) {
 				y[l] += r;
@@ -128,14 +139,59 @@ public class Main extends JComponent implements MouseListener {
 			}
 			l = 0;
 		}
-		checkArreas();
+		// firstPosition = pBluePos.get(0);
+		checkAreas();
 		if (!blueAreas.isEmpty()) {
+			/*
+			 * for (int i = pBluePos.get(0); i < pBluePos.size(); i++) { if
+			 * (pRedPos.contains(i + 19)) { if (pBluePos.contains(i + 20)) { i
+			 * += 20; } else i -= 21; } if (pRedPos.contains(i - 21)) { if
+			 * (pBluePos.contains(i - 20)) i -= 20; else i -= 40; } if
+			 * (pRedPos.contains(i - 40)) { if (pBluePos.contains(i - 20)) i -=
+			 * 20; else i -= 19; } if (pRedPos.contains(i - 20)) { if
+			 * (pBluePos.contains(i + 20)) i += 20; else i -= 40; } if
+			 * (pRedPos.contains(i + 20)) { if (pBluePos.contains(i + 50)) i +=
+			 * 40; else i += 19; } if (pRedPos.contains(i + 40)) { if
+			 * (pBluePos.contains(i + 20)) i += 20; else i += 19; } }
+			 */
 			for (int i = 0; i < blueAreas.size(); i++) {
+				int[] eq = new int[] { (int) (blueAreas.get(i).x - 1.5 * t),
+						(int) (blueAreas.get(i).y + r), blueAreas.get(i).x,
+						(int) (blueAreas.get(i).y + 2 * r),
+						(int) (blueAreas.get(i).x + 1.5 * t),
+						(int) (blueAreas.get(i).y + r),
+						(int) (blueAreas.get(i).x + 1.5 * t),
+						(int) (blueAreas.get(i).y - r), blueAreas.get(i).x,
+						(int) (blueAreas.get(i).y - 2 * r),
+						(int) (blueAreas.get(i).x - 1.5 * t),
+						(int) (blueAreas.get(i).y - r) };
+				for (int j = 0; j < eq.length - 1; j += 2) {
+					int[] check = new int[] { eq[j], eq[j + 1] };
+					if (redAreas.contains(check)) {
+						for (int jb = j + 2; jb < eq.length; jb += 2) {
+							if (blueAreas.contains(new int[] { eq[jb],
+									eq[jb + 1] })) {
+								// xBlue.add(blueAreas.get(i).x);
+								// yBlue.add(blueAreas.get(i).y);
+								j = eq.length;
+								jb = eq.length;
+								l++;
+							}
+						}
+					}
+				}
 				g.setColor(Color.green);
 				g.setStroke(new BasicStroke(4, BasicStroke.CAP_ROUND,
-						BasicStroke.JOIN_ROUND));
-				g.drawLine(blueAreas.get(i)[0], blueAreas.get(i)[1],
-						blueAreas.get(i)[2], blueAreas.get(i)[3]);
+						BasicStroke.JOIN_ROUND)); // g.drawLine(blueAreas.get(i)[0],
+													// blueAreas.get(i)[1],
+													// blueAreas.get(i)[2],
+													// blueAreas.get(i)[3]);
+			}
+			if (xBlue.size() > 0 && yBlue.size() > 0) {
+				for (int i = 0; i < xBlue.size(); i++) {
+					g.drawPolygon(convertIntegers(xBlue.get(i)),
+							convertIntegers(yBlue.get(i)), xBlue.get(i).size());
+				}
 			}
 		}
 		if (!redAreas.isEmpty()) {
@@ -143,13 +199,22 @@ public class Main extends JComponent implements MouseListener {
 				g.setColor(Color.yellow);
 				g.setStroke(new BasicStroke(4, BasicStroke.CAP_ROUND,
 						BasicStroke.JOIN_ROUND));
-				g.drawLine(redAreas.get(i)[0], redAreas.get(i)[1],
-						redAreas.get(i)[2], redAreas.get(i)[3]);
+				// g.drawLine(redAreas.get(i)[0], redAreas.get(i)[1],
+				// redAreas.get(i)[2], redAreas.get(i)[3]);
 			}
 		}
 	}
 
-	public void checkArrays(int[] x, int[] y) {
+	public static int[] convertIntegers(List<Integer> integers) {
+		int[] ret = new int[integers.size()];
+		for (int i = 0; i < ret.length; i++) {
+			ret[i] = integers.get(i).intValue();
+		}
+		return ret;
+	}
+
+	// Проверка на вхождение шестиугольника в множество шестиугольников игроков
+	public void checkArrays(double[] x, double[] y) {
 		for (int a = 0, b = 1; a < bluePlayer.size(); b += 2, a += 2) {
 			if (Arrays.equals(x, bluePlayer.get(a))
 					&& Arrays.equals(y, bluePlayer.get(b)))
@@ -162,8 +227,9 @@ public class Main extends JComponent implements MouseListener {
 		}
 	}
 
-	public void checkArreas() {
-		int l = 0, sumXd = 0, sumYe = 0, sumXa = 0, sumYb = 0;
+	// Проверка на соседство шестиугольников
+	public void checkAreas() {
+		int l = 0, sumXd = 0, sumYe = 0;
 		for (int d = 0, e = 1; d < bluePlayer.size(); d += 2, e += 2) {
 			for (int a = 0, b = 1; a < bluePlayer.size(); b += 2, a += 2) {
 				if ((bluePlayer.get(d)[0] == bluePlayer.get(a)[4]
@@ -193,24 +259,29 @@ public class Main extends JComponent implements MouseListener {
 					while (l < 6) {
 						sumXd += bluePlayer.get(d)[l];
 						sumYe += bluePlayer.get(e)[l];
-						sumXa += bluePlayer.get(a)[l];
-						sumYb += bluePlayer.get(b)[l];
 						l++;
 					}
-					ba = new int[] { sumXa / 6, sumYb / 6, sumXd / 6, sumYe / 6 };
-					for (int i = 0; i < blueAreas.size(); i++) {
-						if (Arrays.equals(blueAreas.get(i), ba))
-							blueExist = true;
-					}
-					if (!blueExist)
+					ba = new Point(sumXd / 6, sumYe / 6);
+					if (!blueAreas.contains(ba)) {
 						blueAreas.add(ba);
-					else
-						blueExist = false;
+						currentArea.add(ba);
+						if (36 > ba.distance(currentArea.get(0))
+								&& ba.distance(currentArea.get(0)) > 33
+								&& !ba.equals(currentArea.get(1))) {
+							ArrayList<Integer> xBlueNew = new ArrayList<Integer>();
+							ArrayList<Integer> yBlueNew = new ArrayList<Integer>();
+							for (int gb = 0; gb < currentArea.size(); gb++) {
+								xBlueNew.add(currentArea.get(gb).x);
+								yBlueNew.add(currentArea.get(gb).y);
+							}
+							xBlue.add(xBlueNew);
+							yBlue.add(yBlueNew);
+							currentArea.clear();
+						}
+					}
 					l = 0;
 					sumXd = 0;
-					sumXa = 0;
 					sumYe = 0;
-					sumYb = 0;
 				}
 			}
 		}
@@ -243,24 +314,14 @@ public class Main extends JComponent implements MouseListener {
 					while (l < 6) {
 						sumXd += redPlayer.get(d)[l];
 						sumYe += redPlayer.get(e)[l];
-						sumXa += redPlayer.get(a)[l];
-						sumYb += redPlayer.get(b)[l];
 						l++;
 					}
-					ba = new int[] { sumXa / 6, sumYb / 6, sumXd / 6, sumYe / 6 };
-					for (int i = 0; i < redAreas.size(); i++) {
-						if (Arrays.equals(redAreas.get(i), ba))
-							redExist = true;
-					}
-					if (!redExist)
+					ba = new Point(sumXd / 6, sumYe / 6);
+					if (!redAreas.contains(ba))
 						redAreas.add(ba);
-					else
-						redExist = false;
 					l = 0;
 					sumXd = 0;
-					sumXa = 0;
 					sumYe = 0;
-					sumYb = 0;
 				}
 			}
 		}
@@ -278,7 +339,6 @@ public class Main extends JComponent implements MouseListener {
 		textArea.setText("pressed");
 		posX = e.getX();
 		posY = e.getY() - 20;
-		clickCount++;
 		repaint();
 	}
 
