@@ -33,8 +33,7 @@ public class Main extends JComponent implements MouseListener {
 	private ArrayList<Integer> pBluePos = new ArrayList<Integer>();
 	private ArrayList<Integer> pRedPos = new ArrayList<Integer>();
 	private ArrayList<ArrayList<Point>> blue = new ArrayList<ArrayList<Point>>();
-	private ArrayList<ArrayList<Integer>> xRed = new ArrayList<ArrayList<Integer>>();
-	private ArrayList<ArrayList<Integer>> yRed = new ArrayList<ArrayList<Integer>>();
+	private ArrayList<ArrayList<Point>> red = new ArrayList<ArrayList<Point>>();
 	private boolean blueHave = false, redHave = false;
 	int t = 20;
 	double r = t * Math.sqrt(3) / 2;
@@ -161,10 +160,14 @@ public class Main extends JComponent implements MouseListener {
 			g.setColor(Color.yellow);
 			g.setStroke(new BasicStroke(4, BasicStroke.CAP_ROUND,
 					BasicStroke.JOIN_ROUND));
-			if (xRed.size() > 0 && yRed.size() > 0) {
-				for (int i = 0; i < xRed.size(); i++) {
-					g.drawPolygon(convertIntegers(xRed.get(i)),
-							convertIntegers(yRed.get(i)), xRed.get(i).size());
+			if (red.size() > 0 && red.size() > 0) {
+				for (int i = 0; i < red.size(); i++) {
+					poly = new Polygon();
+					red.set(i, grahamScan(red.get(i)));
+					for (int j = 0; j < red.get(i).size(); j++) {
+						poly.addPoint(red.get(i).get(j).x, red.get(i).get(j).y);
+					}
+					g.drawPolygon(poly);
 				}
 			}
 		}
@@ -216,17 +219,15 @@ public class Main extends JComponent implements MouseListener {
 							blueNew.add(currentArea.get(0));
 							for (int gb = 1; gb < currentArea.size(); gb++) {
 								for (int g = 1; g < currentArea.size(); g++) {
-									/*if (36 > currentArea.get(gb).distance(
-											blueNew.get(blueNew.size() - 1))
-											&& currentArea
-													.get(gb)
-													.distance(
-															blueNew.get(blueNew
-																	.size() - 1)) > 33) {*/
-										if (!blueNew.contains(currentArea
-												.get(g)))
-											blueNew.add(currentArea.get(g));
-									//}
+									/*
+									 * if (36 > currentArea.get(gb).distance(
+									 * blueNew.get(blueNew.size() - 1)) &&
+									 * currentArea .get(gb) .distance(
+									 * blueNew.get(blueNew .size() - 1)) > 33) {
+									 */
+									if (!blueNew.contains(currentArea.get(g)))
+										blueNew.add(currentArea.get(g));
+									// }
 								}
 							}
 							blue.add(blueNew);
@@ -254,28 +255,23 @@ public class Main extends JComponent implements MouseListener {
 						if (36 > ba.distance(currentRedArea.get(0))
 								&& ba.distance(currentRedArea.get(0)) > 33
 								&& !ba.equals(currentRedArea.get(1))) {
-							ArrayList<Integer> xRedNew = new ArrayList<Integer>();
-							ArrayList<Integer> yRedNew = new ArrayList<Integer>();
-							xRedNew.add(currentRedArea.get(0).x);
-							yRedNew.add(currentRedArea.get(0).y);
+							ArrayList<Point> redNew = new ArrayList<Point>();
+							currentRedArea = grahamScan(currentRedArea);
+							redNew.add(currentRedArea.get(0));
 							for (int gb = 1; gb < currentRedArea.size(); gb++) {
-								if (36 > currentRedArea.get(gb)
-										.distance(
-												new Point(xRedNew.get(xRedNew
-														.size() - 1),
-														yRedNew.get(yRedNew
-																.size() - 1)))
-										&& currentRedArea.get(gb).distance(
-												new Point(xRedNew.get(xRedNew
-														.size() - 1),
-														yRedNew.get(yRedNew
-																.size() - 1))) > 33) {
-									xRedNew.add(currentRedArea.get(gb).x);
-									yRedNew.add(currentRedArea.get(gb).y);
+								for (int g = 1; g < currentRedArea.size(); g++) {
+									/*
+									 * if (36 > currentRedArea.get(gb).distance(
+									 * redNew.get(redNew.size() - 1)) &&
+									 * currentRedArea .get(gb) .distance(
+									 * redNew.get(redNew .size() - 1)) > 33) {
+									 */
+									if (!redNew.contains(currentArea.get(g)))
+										redNew.add(currentRedArea.get(gb));
+									// }
 								}
 							}
-							xRed.add(xRedNew);
-							yRed.add(yRedNew);
+							red.add(redNew);
 							currentRedArea.clear();
 						}
 					}
