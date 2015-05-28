@@ -32,8 +32,7 @@ public class Main extends JComponent implements MouseListener {
 	private ArrayList<Point> currentRedArea = new ArrayList<Point>();
 	private ArrayList<Integer> pBluePos = new ArrayList<Integer>();
 	private ArrayList<Integer> pRedPos = new ArrayList<Integer>();
-	private ArrayList<ArrayList<Integer>> xBlue = new ArrayList<ArrayList<Integer>>();
-	private ArrayList<ArrayList<Integer>> yBlue = new ArrayList<ArrayList<Integer>>();
+	private ArrayList<ArrayList<Point>> blue = new ArrayList<ArrayList<Point>>();
 	private ArrayList<ArrayList<Integer>> xRed = new ArrayList<ArrayList<Integer>>();
 	private ArrayList<ArrayList<Integer>> yRed = new ArrayList<ArrayList<Integer>>();
 	private boolean blueHave = false, redHave = false;
@@ -146,11 +145,15 @@ public class Main extends JComponent implements MouseListener {
 			g.setColor(Color.green);
 			g.setStroke(new BasicStroke(4, BasicStroke.CAP_ROUND,
 					BasicStroke.JOIN_ROUND));
-			if (xBlue.size() > 0 && yBlue.size() > 0) {
-				for (int i = 0; i < xBlue.size(); i++) {
-					grahamScan(i);
-					g.drawPolygon(convertIntegers(xBlue.get(i)),
-							convertIntegers(yBlue.get(i)), xBlue.get(i).size());
+			if (blue.size() > 0) {
+				for (int i = 0; i < blue.size(); i++) {
+					poly = new Polygon();
+					blue.set(i, grahamScan(blue.get(i)));
+					for (int j = 0; j < blue.get(i).size(); j++) {
+						poly.addPoint(blue.get(i).get(j).x,
+								blue.get(i).get(j).y);
+					}
+					g.drawPolygon(poly);
 				}
 			}
 		}
@@ -195,30 +198,7 @@ public class Main extends JComponent implements MouseListener {
 		int l = 0, sumXd = 0, sumYe = 0;
 		for (int d = 0, e = 1; d < bluePlayer.size(); d += 2, e += 2) {
 			for (int a = 0, b = 1; a < bluePlayer.size(); b += 2, a += 2) {
-				if ((bluePlayer.get(d)[0] == bluePlayer.get(a)[4]
-						&& bluePlayer.get(d)[1] == bluePlayer.get(a)[3]
-						&& bluePlayer.get(e)[0] == bluePlayer.get(b)[4] && bluePlayer
-						.get(e)[1] == bluePlayer.get(b)[3])
-						|| (bluePlayer.get(d)[1] == bluePlayer.get(a)[5]
-								&& bluePlayer.get(d)[2] == bluePlayer.get(a)[4]
-								&& bluePlayer.get(e)[1] == bluePlayer.get(b)[5] && bluePlayer
-								.get(e)[2] == bluePlayer.get(b)[4])
-						|| (bluePlayer.get(d)[2] == bluePlayer.get(a)[0]
-								&& bluePlayer.get(d)[3] == bluePlayer.get(a)[5]
-								&& bluePlayer.get(e)[0] == bluePlayer.get(b)[0] && bluePlayer
-								.get(e)[1] == bluePlayer.get(b)[5])
-						|| (bluePlayer.get(d)[3] == bluePlayer.get(a)[1]
-								&& bluePlayer.get(d)[4] == bluePlayer.get(a)[0]
-								&& bluePlayer.get(e)[3] == bluePlayer.get(b)[1] && bluePlayer
-								.get(e)[4] == bluePlayer.get(b)[0])
-						|| (bluePlayer.get(d)[4] == bluePlayer.get(a)[2]
-								&& bluePlayer.get(d)[5] == bluePlayer.get(a)[1]
-								&& bluePlayer.get(e)[4] == bluePlayer.get(b)[2] && bluePlayer
-								.get(e)[5] == bluePlayer.get(b)[1])
-						|| (bluePlayer.get(d)[5] == bluePlayer.get(a)[3]
-								&& bluePlayer.get(d)[0] == bluePlayer.get(a)[2]
-								&& bluePlayer.get(e)[5] == bluePlayer.get(b)[3] && bluePlayer
-								.get(e)[0] == bluePlayer.get(b)[2])) {
+				if (playerCheck(bluePlayer, d, a, b, e)) {
 					while (l < 6) {
 						sumXd += bluePlayer.get(d)[l];
 						sumYe += bluePlayer.get(e)[l];
@@ -231,14 +211,25 @@ public class Main extends JComponent implements MouseListener {
 						if (36 > ba.distance(currentArea.get(0))
 								&& ba.distance(currentArea.get(0)) > 33
 								&& !ba.equals(currentArea.get(1))) {
-							ArrayList<Integer> xBlueNew = new ArrayList<Integer>();
-							ArrayList<Integer> yBlueNew = new ArrayList<Integer>();
-							for (int gb = 0; gb < currentArea.size(); gb++) {
-								xBlueNew.add(currentArea.get(gb).x);
-								yBlueNew.add(currentArea.get(gb).y);
+							ArrayList<Point> blueNew = new ArrayList<Point>();
+							currentArea = grahamScan(currentArea);
+							blueNew.add(currentArea.get(0));
+							for (int gb = 1; gb < currentArea.size(); gb++) {
+								for (int g = 1; g < currentArea.size(); g++) {
+									/*if (36 > currentArea.get(gb).distance(
+											blueNew.get(blueNew.size() - 1))
+											&& currentArea
+													.get(gb)
+													.distance(
+															blueNew.get(blueNew
+																	.size() - 1)) > 33) {*/
+										if (!blueNew.contains(currentArea
+												.get(g)))
+											blueNew.add(currentArea.get(g));
+									//}
+								}
 							}
-							xBlue.add(xBlueNew);
-							yBlue.add(yBlueNew);
+							blue.add(blueNew);
 							currentArea.clear();
 						}
 					}
@@ -250,30 +241,7 @@ public class Main extends JComponent implements MouseListener {
 		}
 		for (int d = 0, e = 1; d < redPlayer.size(); d += 2, e += 2) {
 			for (int a = 0, b = 1; a < redPlayer.size(); b += 2, a += 2) {
-				if ((redPlayer.get(d)[0] == redPlayer.get(a)[4]
-						&& redPlayer.get(d)[1] == redPlayer.get(a)[3]
-						&& redPlayer.get(e)[0] == redPlayer.get(b)[4] && redPlayer
-						.get(e)[1] == redPlayer.get(b)[3])
-						|| (redPlayer.get(d)[1] == redPlayer.get(a)[5]
-								&& redPlayer.get(d)[2] == redPlayer.get(a)[4]
-								&& redPlayer.get(e)[1] == redPlayer.get(b)[5] && redPlayer
-								.get(e)[2] == redPlayer.get(b)[4])
-						|| (redPlayer.get(d)[2] == redPlayer.get(a)[0]
-								&& redPlayer.get(d)[3] == redPlayer.get(a)[5]
-								&& redPlayer.get(e)[0] == redPlayer.get(b)[0] && redPlayer
-								.get(e)[1] == redPlayer.get(b)[5])
-						|| (redPlayer.get(d)[3] == redPlayer.get(a)[1]
-								&& redPlayer.get(d)[4] == redPlayer.get(a)[0]
-								&& redPlayer.get(e)[3] == redPlayer.get(b)[1] && redPlayer
-								.get(e)[4] == redPlayer.get(b)[0])
-						|| (redPlayer.get(d)[4] == redPlayer.get(a)[2]
-								&& redPlayer.get(d)[5] == redPlayer.get(a)[1]
-								&& redPlayer.get(e)[4] == redPlayer.get(b)[2] && redPlayer
-								.get(e)[5] == redPlayer.get(b)[1])
-						|| (redPlayer.get(d)[5] == redPlayer.get(a)[3]
-								&& redPlayer.get(d)[0] == redPlayer.get(a)[2]
-								&& redPlayer.get(e)[5] == redPlayer.get(b)[3] && redPlayer
-								.get(e)[0] == redPlayer.get(b)[2])) {
+				if (playerCheck(redPlayer, d, a, b, e)) {
 					while (l < 6) {
 						sumXd += redPlayer.get(d)[l];
 						sumYe += redPlayer.get(e)[l];
@@ -288,9 +256,23 @@ public class Main extends JComponent implements MouseListener {
 								&& !ba.equals(currentRedArea.get(1))) {
 							ArrayList<Integer> xRedNew = new ArrayList<Integer>();
 							ArrayList<Integer> yRedNew = new ArrayList<Integer>();
-							for (int gb = 0; gb < currentRedArea.size(); gb++) {
-								xRedNew.add(currentRedArea.get(gb).x);
-								yRedNew.add(currentRedArea.get(gb).y);
+							xRedNew.add(currentRedArea.get(0).x);
+							yRedNew.add(currentRedArea.get(0).y);
+							for (int gb = 1; gb < currentRedArea.size(); gb++) {
+								if (36 > currentRedArea.get(gb)
+										.distance(
+												new Point(xRedNew.get(xRedNew
+														.size() - 1),
+														yRedNew.get(yRedNew
+																.size() - 1)))
+										&& currentRedArea.get(gb).distance(
+												new Point(xRedNew.get(xRedNew
+														.size() - 1),
+														yRedNew.get(yRedNew
+																.size() - 1))) > 33) {
+									xRedNew.add(currentRedArea.get(gb).x);
+									yRedNew.add(currentRedArea.get(gb).y);
+								}
 							}
 							xRed.add(xRedNew);
 							yRed.add(yRedNew);
@@ -307,30 +289,73 @@ public class Main extends JComponent implements MouseListener {
 
 	// Определение расположения точки c относительно вектора ab (слева > 0,
 	// справа < 0)
-	public int rotate(int ax, int ay, int bx, int by, int cx, int cy) {
-		return (bx - ax) * (cy - by) - (by - ay) * (cx - bx);
+	public int rotate(Point a, Point b, Point c) {
+		return (b.x - a.x) * (c.y - b.y) - (b.y - a.y) * (c.x - b.x);
 	}
 
 	// Алгоритм сортировки точек Graham scan
-	public void grahamScan(int i) {
+	public ArrayList<Point> grahamScan(ArrayList<Point> points) {
 		int k = 0;
-		for (int j = 0; j < xBlue.get(i).size(); j++) {
-			if (xBlue.get(i).get(j) < xBlue.get(i).get(0)) {
-				Collections.swap(xBlue.get(i), 0, j);
-				Collections.swap(yBlue.get(i), 0, j);
+		for (int j = 1; j < points.size(); j++) {
+			if (points.get(j).x < points.get(0).x) {
+				Collections.swap(points, 0, j);
 			}
 		}
-		for (int j = 0; j < xBlue.get(i).size(); j++) {
+		for (int j = 2; j < points.size(); j++) {
 			k = j;
 			while (k > 1
-					&& rotate(xBlue.get(i).get(0), yBlue.get(i).get(0), xBlue
-							.get(i).get(k - 1), yBlue.get(i).get(k - 1), xBlue
-							.get(i).get(k), yBlue.get(i).get(k)) < 0) {
-				Collections.swap(xBlue.get(i), k - 1, k);
-				Collections.swap(yBlue.get(i), k - 1, k);
+					&& rotate(points.get(0), points.get(k - 1), points.get(k)) < 0) {
+				Collections.swap(points, k - 1, k);
 				k--;
 			}
 		}
+		return points;
+	}
+
+	/*
+	 * public ArrayList<Point> grahamScanForCure(ArrayList<Point> cur) { int k =
+	 * 0; for (int j = 0; j < cur.size(); j++) { if (cur.get(j).x <
+	 * cur.get(0).x) { Collections.swap(cur, 0, j); Collections.swap(cur, 0, j);
+	 * } } for (int j = 0; j < cur.size(); j++) { k = j; while (k > 1 &&
+	 * rotate(cur.get(j).x, cur.get(j).y, cur.get(k - 1).x, cur.get(k - 1).y,
+	 * cur.get(k).x, cur.get(k).y) < 0) { Collections.swap(cur, k - 1, k);
+	 * Collections.swap(cur, k - 1, k); k--; } } return cur; }
+	 */
+
+	public boolean playerCheck(ArrayList<double[]> player, int d, int a, int b,
+			int e) {
+		if ((player.get(d)[0] == player.get(a)[4]
+				&& player.get(d)[1] == player.get(a)[3]
+				&& player.get(e)[0] == player.get(b)[4] && player.get(e)[1] == player
+				.get(b)[3])
+				|| (player.get(d)[1] == player.get(a)[5]
+						&& player.get(d)[2] == player.get(a)[4]
+						&& player.get(e)[1] == player.get(b)[5] && player
+						.get(e)[2] == player.get(b)[4])
+				|| (player.get(d)[2] == player.get(a)[0]
+						&& player.get(d)[3] == player.get(a)[5]
+						&& player.get(e)[0] == player.get(b)[0] && player
+						.get(e)[1] == player.get(b)[5])
+				|| (player.get(d)[3] == player.get(a)[1]
+						&& player.get(d)[4] == player.get(a)[0]
+						&& player.get(e)[3] == player.get(b)[1] && player
+						.get(e)[4] == player.get(b)[0])
+				|| (player.get(d)[4] == player.get(a)[2]
+						&& player.get(d)[5] == player.get(a)[1]
+						&& player.get(e)[4] == player.get(b)[2] && player
+						.get(e)[5] == player.get(b)[1])
+				|| (player.get(d)[5] == player.get(a)[3]
+						&& player.get(d)[0] == player.get(a)[2]
+						&& player.get(e)[5] == player.get(b)[3] && player
+						.get(e)[0] == player.get(b)[2])
+				|| (player.get(d)[5] == player.get(a)[3]
+						&& player.get(d)[0] == player.get(a)[2]
+						&& player.get(e)[3] == player.get(b)[5] && player
+						.get(e)[2] == player.get(b)[0]))
+			return true;
+		else
+			return false;
+
 	}
 
 	@Override
@@ -344,7 +369,7 @@ public class Main extends JComponent implements MouseListener {
 		// TODO Auto-generated method stub
 		textArea.setText("pressed");
 		posX = e.getX();
-		posY = e.getY() - 20;
+		posY = e.getY() - t;
 		repaint();
 	}
 
