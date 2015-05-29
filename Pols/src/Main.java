@@ -9,7 +9,6 @@ import java.awt.Polygon;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -24,16 +23,19 @@ public class Main extends JComponent implements MouseListener {
 	private int posX = 0;
 	private int posY = 0;
 	private Polygon poly = new Polygon();
-	private ArrayList<double[]> bluePlayer = new ArrayList<double[]>();
-	private ArrayList<double[]> redPlayer = new ArrayList<double[]>();
+	private ArrayList<Point> bluePlayer = new ArrayList<Point>();
+	private ArrayList<Point> redPlayer = new ArrayList<Point>();
 	private ArrayList<Point> blueAreas = new ArrayList<Point>();
 	private ArrayList<Point> redAreas = new ArrayList<Point>();
 	private ArrayList<Point> currentArea = new ArrayList<Point>();
 	private ArrayList<Point> currentRedArea = new ArrayList<Point>();
+	private ArrayList<Point> currentRedSurroundArea = new ArrayList<Point>();
+	private ArrayList<Point> currentBlueSurroundArea = new ArrayList<Point>();
 	private ArrayList<Integer> pBluePos = new ArrayList<Integer>();
 	private ArrayList<Integer> pRedPos = new ArrayList<Integer>();
 	private ArrayList<ArrayList<Point>> blue = new ArrayList<ArrayList<Point>>();
 	private ArrayList<ArrayList<Point>> red = new ArrayList<ArrayList<Point>>();
+	Point redPoint;
 	private boolean blueHave = false, redHave = false;
 	int t = 20;
 	double r = t * Math.sqrt(3) / 2;
@@ -74,6 +76,7 @@ public class Main extends JComponent implements MouseListener {
 	public void paint(Graphics g2) {
 		int l = 0, posCount = 0;
 		Graphics2D g = (Graphics2D) g2;
+		Point point;
 		double[] x = { t, 1.5 * t, t, 2 * t, 1.5 * t + t, 2 * t };
 		double[] z = { t, 1.5 * t - t, t, 2 * t, 1.5 * t + t, 2 * t };
 		double[] y = { t, t + r, t + 2 * r, t + 2 * r, t + r, t };
@@ -95,7 +98,8 @@ public class Main extends JComponent implements MouseListener {
 				l = 0;
 			}
 			for (int i = 0; i < 10; i++) {
-				checkArrays(x, y);
+				point = new Point((int) sumCount(x) / 6, (int) sumCount(y) / 6);
+				checkArrays(point);
 				if (blueHave) {
 					g.setColor(Color.BLUE);
 					g.fillPolygon(poly);
@@ -109,13 +113,11 @@ public class Main extends JComponent implements MouseListener {
 						if (poly.contains(posX, posY)) {
 							if (redPlayer.size() < bluePlayer.size()) {
 								g.setColor(Color.RED);
-								redPlayer.add(x.clone());
-								redPlayer.add(y.clone());
+								redPlayer.add(point);
 								pRedPos.add(posCount);
 							} else {
 								g.setColor(Color.BLUE);
-								bluePlayer.add(x.clone());
-								bluePlayer.add(y.clone());
+								bluePlayer.add(point);
 								pBluePos.add(posCount);
 							}
 							g.fillPolygon(poly);
@@ -182,81 +184,91 @@ public class Main extends JComponent implements MouseListener {
 		return ret;
 	}
 
+	public double sumCount(double[] coords) {
+		int i = 0;
+		double sum = 0;
+		while (i < 6) {
+			sum += coords[i];
+			i++;
+		}
+		return sum;
+	}
+
 	// Проверка на вхождение шестиугольника в множество шестиугольников игроков
-	public void checkArrays(double[] x, double[] y) {
-		for (int a = 0, b = 1; a < bluePlayer.size(); b += 2, a += 2) {
-			if (Arrays.equals(x, bluePlayer.get(a))
-					&& Arrays.equals(y, bluePlayer.get(b)))
+	public void checkArrays(Point point) {
+		for (int i = 0; i < bluePlayer.size(); i++) {
+			if (bluePlayer.contains(point))
 				blueHave = true;
 		}
-		for (int a = 0, b = 1; a < redPlayer.size(); b += 2, a += 2) {
-			if (Arrays.equals(x, redPlayer.get(a))
-					&& Arrays.equals(y, redPlayer.get(b)))
+		for (int i = 0; i < redPlayer.size(); i++) {
+			if (redPlayer.contains(point))
 				redHave = true;
 		}
 	}
 
 	// Проверка на соседство шестиугольников
 	public void checkAreas() {
-		int l = 0, sumXd = 0, sumYe = 0;
-		for (int d = 0, e = 1; d < bluePlayer.size(); d += 2, e += 2) {
-			for (int a = 0, b = 1; a < bluePlayer.size(); b += 2, a += 2) {
-				if (playerCheck(bluePlayer, d, a, b, e)) {
-					while (l < 6) {
-						sumXd += bluePlayer.get(d)[l];
-						sumYe += bluePlayer.get(e)[l];
-						l++;
-					}
-					ba = new Point(sumXd / 6, sumYe / 6);
+		for (int i = 0; i < bluePlayer.size(); i++) {
+			for (int j = 0; j < bluePlayer.size(); j++) {
+				if (playerCheck(bluePlayer, i, j)) {
+					ba = new Point(bluePlayer.get(i).x, bluePlayer.get(i).y);
 					if (!blueAreas.contains(ba)) {
 						blueAreas.add(ba);
 						currentArea.add(ba);
-						if (36 > ba.distance(currentArea.get(0))
-								&& ba.distance(currentArea.get(0)) > 33
-								&& !ba.equals(currentArea.get(1))) {
+						currentArea = grahamScan(currentArea);
+						checkSurroundPoints(currentArea, 0);
+						if (36 > currentArea.get(currentArea.size() - 1)
+								.distance(currentArea.get(0))
+								&& currentArea.get(currentArea.size() - 1)
+										.distance(currentArea.get(0)) > 33
+								&& currentArea.size() > 2
+								&& checkPointsSequence(currentArea)
+								&& currentRedSurroundArea.size() != 0) {
+							currentArea = deleteWrongPoints(currentArea, 0);
 							ArrayList<Point> blueNew = new ArrayList<Point>();
-							currentArea = grahamScan(currentArea);
 							blueNew.add(currentArea.get(0));
 							for (int gb = 1; gb < currentArea.size(); gb++) {
 								for (int g = 1; g < currentArea.size(); g++) {
-									/*
-									 * if (36 > currentArea.get(gb).distance(
-									 * blueNew.get(blueNew.size() - 1)) &&
-									 * currentArea .get(gb) .distance(
-									 * blueNew.get(blueNew .size() - 1)) > 33) {
-									 */
-									if (!blueNew.contains(currentArea.get(g)))
-										blueNew.add(currentArea.get(g));
-									// }
+									if (36 > currentArea.get(gb).distance(
+											blueNew.get(blueNew.size() - 1))
+											&& currentArea
+													.get(gb)
+													.distance(
+															blueNew.get(blueNew
+																	.size() - 1)) > 33) {
+										if (!blueNew.contains(currentArea
+												.get(g)))
+											blueNew.add(currentArea.get(g));
+									}
 								}
 							}
 							blue.add(blueNew);
 							currentArea.clear();
+							currentRedSurroundArea.clear();
 						}
 					}
-					l = 0;
-					sumXd = 0;
-					sumYe = 0;
 				}
 			}
 		}
-		for (int d = 0, e = 1; d < redPlayer.size(); d += 2, e += 2) {
-			for (int a = 0, b = 1; a < redPlayer.size(); b += 2, a += 2) {
-				if (playerCheck(redPlayer, d, a, b, e)) {
-					while (l < 6) {
-						sumXd += redPlayer.get(d)[l];
-						sumYe += redPlayer.get(e)[l];
-						l++;
-					}
-					ba = new Point(sumXd / 6, sumYe / 6);
+		for (int i = 0; i < redPlayer.size(); i++) {
+			for (int j = 0; j < redPlayer.size(); j++) {
+				if (playerCheck(redPlayer, i, j)) {
+					ba = new Point(redPlayer.get(i).x, redPlayer.get(i).y);
 					if (!redAreas.contains(ba)) {
 						redAreas.add(ba);
 						currentRedArea.add(ba);
-						if (36 > ba.distance(currentRedArea.get(0))
-								&& ba.distance(currentRedArea.get(0)) > 33
-								&& !ba.equals(currentRedArea.get(1))) {
+						currentRedArea = grahamScan(currentRedArea);
+						if (36 > currentRedArea.get(currentRedArea.size() - 1)
+								.distance(currentRedArea.get(0))
+								&& currentRedArea
+										.get(currentRedArea.size() - 1)
+										.distance(currentRedArea.get(0)) > 33
+								&& currentRedArea.size() > 2
+								&& checkPointsSequence(currentRedArea)
+								&& currentBlueSurroundArea.size() != 0) {
+							currentRedArea = deleteWrongPoints(currentRedArea,
+									0);
 							ArrayList<Point> redNew = new ArrayList<Point>();
-							currentRedArea = grahamScan(currentRedArea);
 							redNew.add(currentRedArea.get(0));
 							for (int gb = 1; gb < currentRedArea.size(); gb++) {
 								for (int g = 1; g < currentRedArea.size(); g++) {
@@ -266,7 +278,7 @@ public class Main extends JComponent implements MouseListener {
 									 * currentRedArea .get(gb) .distance(
 									 * redNew.get(redNew .size() - 1)) > 33) {
 									 */
-									if (!redNew.contains(currentArea.get(g)))
+									if (!redNew.contains(currentRedArea.get(g)))
 										redNew.add(currentRedArea.get(gb));
 									// }
 								}
@@ -275,12 +287,100 @@ public class Main extends JComponent implements MouseListener {
 							currentRedArea.clear();
 						}
 					}
-					l = 0;
-					sumXd = 0;
-					sumYe = 0;
 				}
 			}
 		}
+	}
+
+	// Проверка отсутствие разрывов в контуре
+	public boolean checkPointsSequence(ArrayList<Point> points) {
+		boolean result = true;
+		for (int i = 0; i < points.size(); i++) {
+			if (i != points.size() - 1) {
+				if (points.get(i).distance(points.get(i + 1)) > 36) {
+					result = false;
+					break;
+				}
+			} else {
+				if (points.get(i).distance(points.get(0)) > 36) {
+					result = false;
+					break;
+				}
+			}
+		}
+		return result;
+	}
+
+	// Проверка на вхождение вражеских точек в занятую область
+	public void checkSurroundPoints(ArrayList<Point> points, int f) {
+		if (f == 0) {
+			for (int i = 0; i < points.size(); i++) {
+				for (int j = 0; j < redPlayer.size(); j++) {
+					if (points.get(i).distance(redPlayer.get(j)) < 36) {
+						for (int k = 1; k < points.size(); k++) {
+							if (points.get(k).distance(redPlayer.get(j)) < 36) {
+								if (!currentRedSurroundArea.contains(redPlayer
+										.get(j)))
+									currentRedSurroundArea
+											.add(redPlayer.get(j));
+							}
+						}
+					}
+				}
+			}
+		} else {
+			for (int i = 0; i < points.size(); i++) {
+				for (int j = 0; j < bluePlayer.size(); j++) {
+					if (points.get(i).distance(bluePlayer.get(j)) < 36) {
+						for (int k = 1; k < points.size(); k++) {
+							if (points.get(k).distance(bluePlayer.get(j)) < 36) {
+								if (!currentBlueSurroundArea
+										.contains(bluePlayer.get(j)))
+									currentBlueSurroundArea.add(bluePlayer
+											.get(j));
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// Удаление точек, не окружающих точки соперника и входящих в контур
+	public ArrayList<Point> deleteWrongPoints(ArrayList<Point> points, int f) {
+		boolean included = false;
+		if (f == 0) {
+			for (int i = 0; i < points.size(); i++) {
+				for (int j = 0; j < currentRedSurroundArea.size(); j++) {
+					if (points.get(i).distance(currentRedSurroundArea.get(j)) < 36) {
+						included = true;
+						break;
+					}
+				}
+				if (!included) {
+					points.remove(i);
+					currentArea.remove(i);
+					i--;
+				} else
+					included = false;
+			}
+		} else {
+			for (int i = 0; i < points.size(); i++) {
+				for (int j = 0; j < currentBlueSurroundArea.size(); j++) {
+					if (points.get(i).distance(currentBlueSurroundArea.get(j)) < 36) {
+						included = true;
+						break;
+					}
+				}
+				if (!included) {
+					points.remove(i);
+					currentRedArea.remove(i);
+					i--;
+				} else
+					included = false;
+			}
+		}
+		return points;
 	}
 
 	// Определение расположения точки c относительно вектора ab (слева > 0,
@@ -308,46 +408,8 @@ public class Main extends JComponent implements MouseListener {
 		return points;
 	}
 
-	/*
-	 * public ArrayList<Point> grahamScanForCure(ArrayList<Point> cur) { int k =
-	 * 0; for (int j = 0; j < cur.size(); j++) { if (cur.get(j).x <
-	 * cur.get(0).x) { Collections.swap(cur, 0, j); Collections.swap(cur, 0, j);
-	 * } } for (int j = 0; j < cur.size(); j++) { k = j; while (k > 1 &&
-	 * rotate(cur.get(j).x, cur.get(j).y, cur.get(k - 1).x, cur.get(k - 1).y,
-	 * cur.get(k).x, cur.get(k).y) < 0) { Collections.swap(cur, k - 1, k);
-	 * Collections.swap(cur, k - 1, k); k--; } } return cur; }
-	 */
-
-	public boolean playerCheck(ArrayList<double[]> player, int d, int a, int b,
-			int e) {
-		if ((player.get(d)[0] == player.get(a)[4]
-				&& player.get(d)[1] == player.get(a)[3]
-				&& player.get(e)[0] == player.get(b)[4] && player.get(e)[1] == player
-				.get(b)[3])
-				|| (player.get(d)[1] == player.get(a)[5]
-						&& player.get(d)[2] == player.get(a)[4]
-						&& player.get(e)[1] == player.get(b)[5] && player
-						.get(e)[2] == player.get(b)[4])
-				|| (player.get(d)[2] == player.get(a)[0]
-						&& player.get(d)[3] == player.get(a)[5]
-						&& player.get(e)[0] == player.get(b)[0] && player
-						.get(e)[1] == player.get(b)[5])
-				|| (player.get(d)[3] == player.get(a)[1]
-						&& player.get(d)[4] == player.get(a)[0]
-						&& player.get(e)[3] == player.get(b)[1] && player
-						.get(e)[4] == player.get(b)[0])
-				|| (player.get(d)[4] == player.get(a)[2]
-						&& player.get(d)[5] == player.get(a)[1]
-						&& player.get(e)[4] == player.get(b)[2] && player
-						.get(e)[5] == player.get(b)[1])
-				|| (player.get(d)[5] == player.get(a)[3]
-						&& player.get(d)[0] == player.get(a)[2]
-						&& player.get(e)[5] == player.get(b)[3] && player
-						.get(e)[0] == player.get(b)[2])
-				|| (player.get(d)[5] == player.get(a)[3]
-						&& player.get(d)[0] == player.get(a)[2]
-						&& player.get(e)[3] == player.get(b)[5] && player
-						.get(e)[2] == player.get(b)[0]))
+	public boolean playerCheck(ArrayList<Point> player, int i, int j) {
+		if (player.get(i).distance(player.get(j)) < 36 && i != j)
 			return true;
 		else
 			return false;
